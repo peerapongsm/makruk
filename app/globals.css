@@ -23,6 +23,9 @@
   --panel: #171009;
   --panel-2: #120d08;
   --border: rgba(201, 162, 39, 0.32);
+  --surface: #241b10;
+  --surface-2: #180f08;
+  --surface-border: rgba(201, 162, 39, 0.4);
 
   --font-display: "Charmonman", "Noto Sans Thai", serif;
   --font-body: "Pridi", "Noto Sans Thai", serif;
@@ -55,8 +58,10 @@ h1, h2, h3 {
   font-weight: 700;
   color: var(--gold-bright);
   letter-spacing: 0.01em;
+  text-wrap: balance;
 }
-p { margin: 0 0 8px; }
+p { margin: 0 0 8px; text-wrap: pretty; }
+li { text-wrap: pretty; }
 
 button {
   font: inherit;
@@ -102,9 +107,25 @@ button.plain:hover { text-decoration-color: currentColor; filter: none; box-shad
 a { color: var(--gold-bright); }
 
 .page {
-  margin: 0 auto;
-  padding: 20px 16px 40px;
+  margin: 24px auto 40px;
+  padding: 22px 16px 32px;
   max-width: 640px;
+  background: linear-gradient(165deg, var(--surface) 0%, var(--surface-2) 100%);
+  border: 1px solid var(--surface-border);
+  border-radius: 20px;
+  box-shadow:
+    0 1px 0 rgba(232, 199, 102, 0.1) inset,
+    0 0 0 1px rgba(0, 0, 0, 0.5),
+    0 30px 60px rgba(0, 0, 0, 0.55),
+    0 0 40px rgba(201, 162, 39, 0.06);
+}
+
+@media (min-width: 640px) {
+  .page { padding: 32px 32px 40px; }
+}
+
+@media (min-width: 1024px) {
+  .page.game { max-width: 1000px; }
 }
 
 .small-caps {
@@ -222,6 +243,10 @@ a { color: var(--gold-bright); }
   .board { width: 480px; }
 }
 
+@media (min-width: 1024px) {
+  .board { width: 520px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .board__dot, .board__square--check { animation: none; }
   .board__square--check { box-shadow: inset 0 0 0 3px var(--crimson-bright); }
@@ -269,6 +294,33 @@ a { color: var(--gold-bright); }
 }
 
 /* ── Game screen ───────────────────────────────────────────── */
+.game__layout {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.game__side-top, .game__side-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+@media (min-width: 1024px) {
+  .game__layout {
+    position: relative;
+    padding-left: 548px;
+    min-height: 550px;
+    gap: 24px;
+  }
+  .game__board-wrap {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 520px;
+  }
+  .game__layout .game__controls { grid-template-columns: repeat(2, 1fr); }
+}
+
 .game__status {
   display: flex;
   align-items: center;
