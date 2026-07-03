@@ -1,4 +1,19 @@
+import { Charmonman, Pridi } from "next/font/google";
 import "./globals.css";
+
+const charmonman = Charmonman({
+  subsets: ["thai", "latin"],
+  weight: ["400", "700"],
+  variable: "--font-display",
+  display: "swap",
+});
+
+const pridi = Pridi({
+  subsets: ["thai", "latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-body",
+  display: "swap",
+});
 
 export const metadata = {
   title: "หมากรุกไทยออนไลน์ — Makruk",
@@ -7,7 +22,7 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="th">
+    <html lang="th" className={`${charmonman.variable} ${pridi.variable}`}>
       <head>
         <script
           defer

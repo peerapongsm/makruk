@@ -39,13 +39,26 @@ function Shape({ type }: { type: PieceType }) {
 
 export function PieceIcon({ piece, size = "100%" }: { piece: Piece; size?: string | number }) {
   const isWhite = piece.color === "white";
-  const fill = isWhite ? "#faf5ea" : "#3a2a1c";
-  const stroke = isWhite ? "#8b5e34" : "#1a1108";
-  const textFill = isWhite ? "#3a2a1c" : "#faf5ea";
+  // Lacquerware pairing: ivory-gold medallion for white, near-black lacquer for black —
+  // both traced in burnished gold linework, echoing ลายรดน้ำ gilt-on-lacquer motifs.
+  const fill = isWhite ? "#ecdcb2" : "#20150c";
+  const stroke = isWhite ? "#8b6b23" : "#c9a227";
+  const innerLine = isWhite ? "#c9a227" : "#e8c766";
+  const textFill = isWhite ? "#3a2410" : "#e8c766";
 
   return (
     <svg viewBox="0 0 100 100" width={size} height={size} role="img" aria-label={pieceAriaLabel(piece)}>
-      <g fill={fill} stroke={stroke} strokeWidth="4" strokeLinejoin="round">
+      <g fill={fill} stroke={stroke} strokeWidth="5" strokeLinejoin="round">
+        <Shape type={piece.type} />
+      </g>
+      <g
+        fill="none"
+        stroke={innerLine}
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+        opacity="0.85"
+        transform="translate(50 50) scale(0.82) translate(-50 -50)"
+      >
         <Shape type={piece.type} />
       </g>
       <text
@@ -55,11 +68,13 @@ export function PieceIcon({ piece, size = "100%" }: { piece: Piece; size?: strin
         fontSize="34"
         fontWeight="700"
         fill={textFill}
-        fontFamily="'Noto Sans Thai', system-ui, sans-serif"
+        fontFamily="'Pridi', 'Noto Sans Thai', system-ui, sans-serif"
       >
         {LABEL[piece.type]}
       </text>
-      {piece.promoted && <circle cx="80" cy="22" r="9" fill={isWhite ? "#c9a15a" : "#f4d35e"} stroke={stroke} strokeWidth="2" />}
+      {piece.promoted && (
+        <circle cx="80" cy="22" r="9" fill="#c04255" stroke="#e8c766" strokeWidth="2" />
+      )}
     </svg>
   );
 }
