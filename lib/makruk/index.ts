@@ -4,3 +4,4 @@ export * from "./moves";
 export * from "./engine";
 export * from "./notation";
 export * from "./values";
+export * from "./bot";
