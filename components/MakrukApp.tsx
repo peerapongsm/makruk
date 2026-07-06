@@ -11,6 +11,7 @@ import {
 } from "@/lib/makruk";
 import type { Color, GameState, Move, Square } from "@/lib/makruk";
 import { useBotWorker } from "@/hooks/useBotWorker";
+import { useOnlineGame } from "@/hooks/useOnlineGame";
 import { HomeScreen } from "./HomeScreen";
 import { GameScreen } from "./GameScreen";
 import { LobbyScreen } from "./LobbyScreen";
@@ -18,7 +19,10 @@ import { parseRoomIdFromSearch } from "./lobby-utils";
 import type { RoomHandle } from "@/lib/net/room";
 
 export type Difficulty = "easy" | "medium" | "hard";
-export type Mode = { kind: "hotseat" } | { kind: "bot"; difficulty: Difficulty };
+export type Mode =
+  | { kind: "hotseat" }
+  | { kind: "bot"; difficulty: Difficulty }
+  | { kind: "online"; colors: { local: Color; remote: Color }; opponentNickname: string };
 
 const BOT_COLOR: Color = "black";
 const HUMAN_COLOR: Color = "white";
@@ -33,14 +37,12 @@ export function MakrukApp() {
   const [showLobby, setShowLobby] = useState(
     () => typeof window !== "undefined" && parseRoomIdFromSearch(window.location.search) !== null
   );
-  // Task 4 scope ends at "connected" — Task 5 wires this into an actual online
-  // GameScreen/session. This placeholder just proves the handoff works.
-  const [onlineConnected, setOnlineConnected] = useState<{
-    roomId: string;
-    colors: { local: Color; remote: Color };
-    opponentNickname: string;
-  } | null>(null);
+  const [onlineRoom, setOnlineRoom] = useState<RoomHandle | null>(null);
   const { requestMove } = useBotWorker();
+  const onlineGame = useOnlineGame(
+    mode?.kind === "online" ? onlineRoom : null,
+    mode?.kind === "online" ? mode.colors : null
+  );
 
   const state = history[history.length - 1];
 
@@ -49,14 +51,16 @@ export function MakrukApp() {
     [state, selected]
   );
 
-  const inCheck = useMemo(() => isInCheck(state.board, state.turn), [state]);
-
   const resetGame = useCallback(() => {
+    if (mode?.kind === "online") {
+      onlineRoom?.leave();
+      setOnlineRoom(null);
+    }
     setHistory([createInitialState()]);
     setSelected(null);
     setFlipped(false);
     setMode(null);
-  }, []);
+  }, [mode, onlineRoom]);
 
   const startHotseat = useCallback(() => {
     setHistory([createInitialState()]);
@@ -76,8 +80,11 @@ export function MakrukApp() {
 
   const handleOnlineStart = useCallback(
     (room: RoomHandle, colors: { local: Color; remote: Color }, opponentNickname: string) => {
-      setOnlineConnected({ roomId: room.roomId, colors, opponentNickname });
+      setOnlineRoom(room);
+      setMode({ kind: "online", colors, opponentNickname });
       setShowLobby(false);
+      setSelected(null);
+      setFlipped(false);
     },
     []
   );
@@ -152,25 +159,6 @@ export function MakrukApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, state, requestMove]);
 
-  if (onlineConnected) {
-    const colorLabel = onlineConnected.colors.local === "white" ? "ฝ่ายขาว" : "ฝ่ายดำ";
-    return (
-      <div className="page home">
-        <h1>เชื่อมต่อสำเร็จ!</h1>
-        <p>
-          ห้อง {onlineConnected.roomId.slice(0, 8)} — คุณเล่น{colorLabel} พบกับ{" "}
-          {onlineConnected.opponentNickname}
-        </p>
-        <p className="home__footnote">
-          (หน้าจอนี้เป็นตัวยึดพื้นที่ชั่วคราว — การเล่นเกมออนไลน์จริงจะต่อยอดในงานถัดไป)
-        </p>
-        <button type="button" className="plain" onClick={() => setOnlineConnected(null)}>
-          ← กลับหน้าหลัก
-        </button>
-      </div>
-    );
-  }
-
   if (!mode) {
     if (showLobby) {
       return <LobbyScreen onStart={handleOnlineStart} onBack={() => setShowLobby(false)} />;
@@ -178,20 +166,29 @@ export function MakrukApp() {
     return <HomeScreen onStartHotseat={startHotseat} onStartBot={startBot} onStartOnline={startOnline} />;
   }
 
+  // Online mode drives its board/turn state through useOnlineGame (session + room)
+  // instead of the local `history` stack — pick whichever this render is in.
+  const isOnline = mode.kind === "online";
+  const displayState = isOnline ? onlineGame.state : state;
+  const displaySelected = isOnline ? onlineGame.selected : selected;
+  const displayLegalMoves = isOnline ? onlineGame.legalMoves : legalMoves;
+  const displayInCheck = isInCheck(displayState.board, displayState.turn);
+
   return (
     <GameScreen
-      state={state}
+      state={displayState}
       mode={mode}
-      selected={selected}
-      legalMoves={legalMoves}
-      inCheck={inCheck}
+      selected={displaySelected}
+      legalMoves={displayLegalMoves}
+      inCheck={displayInCheck}
       flipped={flipped}
       thinking={thinking}
+      opponentLeft={isOnline ? onlineGame.opponentLeft : false}
       canUndo={mode.kind === "hotseat" && history.length > 1}
-      onTapSquare={handleTapSquare}
+      onTapSquare={isOnline ? onlineGame.onTapSquare : handleTapSquare}
       onFlip={() => setFlipped((f) => !f)}
       onUndo={undo}
-      onResign={handleResign}
+      onResign={isOnline ? onlineGame.onResign : handleResign}
       onNewGame={resetGame}
     />
   );

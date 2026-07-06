@@ -13,6 +13,8 @@ interface GameScreenProps {
   inCheck: boolean;
   flipped: boolean;
   thinking: boolean;
+  /** Online mode only: the peer's presence-leave fired — the game has ended locally. */
+  opponentLeft?: boolean;
   canUndo: boolean;
   onTapSquare: (square: Square) => void;
   onFlip: () => void;
@@ -39,6 +41,7 @@ export function GameScreen({
   inCheck,
   flipped,
   thinking,
+  opponentLeft,
   canUndo,
   onTapSquare,
   onFlip,
@@ -47,7 +50,12 @@ export function GameScreen({
   onNewGame,
 }: GameScreenProps) {
   const tally = currentCountingTally(state);
-  const modeLabel = mode.kind === "hotseat" ? "2 คนเครื่องเดียว" : `บอท (${DIFFICULTY_LABEL[mode.difficulty]})`;
+  const modeLabel =
+    mode.kind === "hotseat"
+      ? "2 คนเครื่องเดียว"
+      : mode.kind === "bot"
+        ? `บอท (${DIFFICULTY_LABEL[mode.difficulty]})`
+        : `ออนไลน์ กับ ${mode.opponentNickname}`;
 
   return (
     <div className="page game">
@@ -56,14 +64,26 @@ export function GameScreen({
           <div className="game__status-block">
             <p className="small-caps">{modeLabel}</p>
 
-            {!state.result && (
+            {!state.result && !opponentLeft && (
               <div className="game__status">
                 <span className={`game__turn game__turn--${state.turn}`}>
-                  ตาของ{COLOR_LABEL[state.turn]}
-                  {mode.kind === "bot" && state.turn === "black" ? " (บอท)" : ""}
+                  {mode.kind === "online" ? (
+                    state.turn === mode.colors.local ? "ตาของคุณ" : "รอคู่ต่อสู้…"
+                  ) : (
+                    <>
+                      ตาของ{COLOR_LABEL[state.turn]}
+                      {mode.kind === "bot" && state.turn === "black" ? " (บอท)" : ""}
+                    </>
+                  )}
                 </span>
                 {thinking && <span className="game__thinking">บอทกำลังคิด…</span>}
                 {inCheck && !thinking && <span className="game__check-warning">รุก! ขุนกำลังถูกรุก</span>}
+              </div>
+            )}
+
+            {opponentLeft && !state.result && (
+              <div className="game__result" role="alert">
+                <h2>คู่ต่อสู้ออกจากเกม</h2>
               </div>
             )}
           </div>
@@ -88,7 +108,11 @@ export function GameScreen({
                     ? state.result.winner === "white"
                       ? "คุณชนะ!"
                       : "คุณแพ้"
-                    : `${COLOR_LABEL[state.result.winner]}ชนะ`}
+                    : mode.kind === "online"
+                      ? state.result.winner === mode.colors.local
+                        ? "คุณชนะ!"
+                        : "คุณแพ้"
+                      : `${COLOR_LABEL[state.result.winner]}ชนะ`}
               </h2>
               <p>เหตุผล: {RESULT_REASON_LABEL[state.result.reason] ?? state.result.reason}</p>
             </div>
@@ -117,7 +141,7 @@ export function GameScreen({
             <button type="button" className="secondary" onClick={onFlip}>
               พลิกกระดาน
             </button>
-            <button type="button" className="danger" onClick={onResign} disabled={!!state.result}>
+            <button type="button" className="danger" onClick={onResign} disabled={!!state.result || !!opponentLeft}>
               ยอมแพ้
             </button>
           </div>
