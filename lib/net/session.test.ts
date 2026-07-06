@@ -70,6 +70,17 @@ describe("session turn guard + engine validation", () => {
     expect(r.ok).toBe(false);
   });
 
+  it("rejects a remote move tagged with the wrong peer color even though the move itself is legal", () => {
+    // Isolates the turn guard from the legality guard: after white's first move it
+    // is black's turn, and blackFirstPawnMove IS legal for the actual mover (black).
+    // Tagging it fromPeer: "white" must still be rejected on the turn check alone —
+    // proving the turn guard, not incidental illegality, is what stops it.
+    let s = createSession("white");
+    s = applyLocalMove(s, whiteFirstPawnMove).s;
+    const r = applyRemoteMove(s, blackFirstPawnMove, "white");
+    expect(r.ok).toBe(false);
+  });
+
   it("rejects an illegal move even when it is the mover's actual turn", () => {
     // Isolates the legality guard from the turn guard: turn matches (black to move
     // after white's first move), but the move itself is not engine-legal.
