@@ -6,3 +6,4 @@ memory.md
 *.tsbuildinfo
 *.local
 .DS_Store
+.worktrees
