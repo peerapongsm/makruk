@@ -6,9 +6,10 @@ import type { Difficulty } from "./MakrukApp";
 interface HomeScreenProps {
   onStartHotseat: () => void;
   onStartBot: (difficulty: Difficulty) => void;
+  onStartOnline: () => void;
 }
 
-export function HomeScreen({ onStartHotseat, onStartBot }: HomeScreenProps) {
+export function HomeScreen({ onStartHotseat, onStartBot, onStartOnline }: HomeScreenProps) {
   const router = useRouter();
   return (
     <div className="page home">
@@ -35,6 +36,13 @@ export function HomeScreen({ onStartHotseat, onStartBot }: HomeScreenProps) {
             บอท: ยาก
           </button>
         </div>
+      </section>
+
+      <section className="home__section">
+        <h2 className="small-caps">เล่นออนไลน์</h2>
+        <button type="button" className="home__mode-btn" onClick={onStartOnline}>
+          เล่นออนไลน์กับเพื่อน (ลิงก์เชิญ)
+        </button>
       </section>
 
       <p className="home__footnote">เล่นเป็นฝ่ายขาวเสมอเมื่อเล่นกับบอท</p>

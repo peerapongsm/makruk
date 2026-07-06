@@ -13,6 +13,9 @@ import type { Color, GameState, Move, Square } from "@/lib/makruk";
 import { useBotWorker } from "@/hooks/useBotWorker";
 import { HomeScreen } from "./HomeScreen";
 import { GameScreen } from "./GameScreen";
+import { LobbyScreen } from "./LobbyScreen";
+import { parseRoomIdFromSearch } from "./lobby-utils";
+import type { RoomHandle } from "@/lib/net/room";
 
 export type Difficulty = "easy" | "medium" | "hard";
 export type Mode = { kind: "hotseat" } | { kind: "bot"; difficulty: Difficulty };
@@ -26,6 +29,17 @@ export function MakrukApp() {
   const [selected, setSelected] = useState<Square | null>(null);
   const [flipped, setFlipped] = useState(false);
   const [thinking, setThinking] = useState(false);
+  // An invite link (`?room=`) should land straight in the lobby, skipping the picker.
+  const [showLobby, setShowLobby] = useState(
+    () => typeof window !== "undefined" && parseRoomIdFromSearch(window.location.search) !== null
+  );
+  // Task 4 scope ends at "connected" — Task 5 wires this into an actual online
+  // GameScreen/session. This placeholder just proves the handoff works.
+  const [onlineConnected, setOnlineConnected] = useState<{
+    roomId: string;
+    colors: { local: Color; remote: Color };
+    opponentNickname: string;
+  } | null>(null);
   const { requestMove } = useBotWorker();
 
   const state = history[history.length - 1];
@@ -57,6 +71,16 @@ export function MakrukApp() {
     setFlipped(false);
     setMode({ kind: "bot", difficulty });
   }, []);
+
+  const startOnline = useCallback(() => setShowLobby(true), []);
+
+  const handleOnlineStart = useCallback(
+    (room: RoomHandle, colors: { local: Color; remote: Color }, opponentNickname: string) => {
+      setOnlineConnected({ roomId: room.roomId, colors, opponentNickname });
+      setShowLobby(false);
+    },
+    []
+  );
 
   const playMove = useCallback(
     (move: { from: Square; to: Square }) => {
@@ -128,8 +152,30 @@ export function MakrukApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, state, requestMove]);
 
+  if (onlineConnected) {
+    const colorLabel = onlineConnected.colors.local === "white" ? "ฝ่ายขาว" : "ฝ่ายดำ";
+    return (
+      <div className="page home">
+        <h1>เชื่อมต่อสำเร็จ!</h1>
+        <p>
+          ห้อง {onlineConnected.roomId.slice(0, 8)} — คุณเล่น{colorLabel} พบกับ{" "}
+          {onlineConnected.opponentNickname}
+        </p>
+        <p className="home__footnote">
+          (หน้าจอนี้เป็นตัวยึดพื้นที่ชั่วคราว — การเล่นเกมออนไลน์จริงจะต่อยอดในงานถัดไป)
+        </p>
+        <button type="button" className="plain" onClick={() => setOnlineConnected(null)}>
+          ← กลับหน้าหลัก
+        </button>
+      </div>
+    );
+  }
+
   if (!mode) {
-    return <HomeScreen onStartHotseat={startHotseat} onStartBot={startBot} />;
+    if (showLobby) {
+      return <LobbyScreen onStart={handleOnlineStart} onBack={() => setShowLobby(false)} />;
+    }
+    return <HomeScreen onStartHotseat={startHotseat} onStartBot={startBot} onStartOnline={startOnline} />;
   }
 
   return (
