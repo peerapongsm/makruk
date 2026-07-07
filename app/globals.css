@@ -293,6 +293,49 @@ a { color: var(--gold-bright); }
   .page.home > * { animation: none; opacity: 1; transform: none; }
 }
 
+/* ── Lobby screen (online PvP) ────────────────────────────── */
+.lobby__label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 14px; }
+.lobby__input {
+  width: 100%;
+  padding: 10px 14px;
+  font: inherit;
+  font-family: var(--font-body), sans-serif;
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+.lobby__input:focus { outline: none; border-color: var(--gold); }
+.lobby__code {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--gold-bright);
+  text-align: center;
+  margin: 4px 0 12px;
+}
+.lobby__invite {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.lobby__invite-link {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--gold-bright);
+  font-size: 14px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.lobby__status { color: var(--muted); font-style: italic; margin: 16px 0; }
+.lobby__error { color: var(--danger); margin: 16px 0; }
+
 /* ── Game screen ───────────────────────────────────────────── */
 .game__layout {
   display: flex;

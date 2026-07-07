@@ -11,11 +11,18 @@ import {
 } from "@/lib/makruk";
 import type { Color, GameState, Move, Square } from "@/lib/makruk";
 import { useBotWorker } from "@/hooks/useBotWorker";
+import { useOnlineGame } from "@/hooks/useOnlineGame";
 import { HomeScreen } from "./HomeScreen";
 import { GameScreen } from "./GameScreen";
+import { LobbyScreen } from "./LobbyScreen";
+import { parseRoomIdFromSearch } from "./lobby-utils";
+import type { RoomHandle } from "@/lib/net/room";
 
 export type Difficulty = "easy" | "medium" | "hard";
-export type Mode = { kind: "hotseat" } | { kind: "bot"; difficulty: Difficulty };
+export type Mode =
+  | { kind: "hotseat" }
+  | { kind: "bot"; difficulty: Difficulty }
+  | { kind: "online"; colors: { local: Color; remote: Color }; opponentNickname: string };
 
 const BOT_COLOR: Color = "black";
 const HUMAN_COLOR: Color = "white";
@@ -26,7 +33,16 @@ export function MakrukApp() {
   const [selected, setSelected] = useState<Square | null>(null);
   const [flipped, setFlipped] = useState(false);
   const [thinking, setThinking] = useState(false);
+  // An invite link (`?room=`) should land straight in the lobby, skipping the picker.
+  const [showLobby, setShowLobby] = useState(
+    () => typeof window !== "undefined" && parseRoomIdFromSearch(window.location.search) !== null
+  );
+  const [onlineRoom, setOnlineRoom] = useState<RoomHandle | null>(null);
   const { requestMove } = useBotWorker();
+  const onlineGame = useOnlineGame(
+    mode?.kind === "online" ? onlineRoom : null,
+    mode?.kind === "online" ? mode.colors : null
+  );
 
   const state = history[history.length - 1];
 
@@ -35,14 +51,16 @@ export function MakrukApp() {
     [state, selected]
   );
 
-  const inCheck = useMemo(() => isInCheck(state.board, state.turn), [state]);
-
   const resetGame = useCallback(() => {
+    if (mode?.kind === "online") {
+      onlineRoom?.leave();
+      setOnlineRoom(null);
+    }
     setHistory([createInitialState()]);
     setSelected(null);
     setFlipped(false);
     setMode(null);
-  }, []);
+  }, [mode, onlineRoom]);
 
   const startHotseat = useCallback(() => {
     setHistory([createInitialState()]);
@@ -57,6 +75,19 @@ export function MakrukApp() {
     setFlipped(false);
     setMode({ kind: "bot", difficulty });
   }, []);
+
+  const startOnline = useCallback(() => setShowLobby(true), []);
+
+  const handleOnlineStart = useCallback(
+    (room: RoomHandle, colors: { local: Color; remote: Color }, opponentNickname: string) => {
+      setOnlineRoom(room);
+      setMode({ kind: "online", colors, opponentNickname });
+      setShowLobby(false);
+      setSelected(null);
+      setFlipped(false);
+    },
+    []
+  );
 
   const playMove = useCallback(
     (move: { from: Square; to: Square }) => {
@@ -129,23 +160,35 @@ export function MakrukApp() {
   }, [mode, state, requestMove]);
 
   if (!mode) {
-    return <HomeScreen onStartHotseat={startHotseat} onStartBot={startBot} />;
+    if (showLobby) {
+      return <LobbyScreen onStart={handleOnlineStart} onBack={() => setShowLobby(false)} />;
+    }
+    return <HomeScreen onStartHotseat={startHotseat} onStartBot={startBot} onStartOnline={startOnline} />;
   }
+
+  // Online mode drives its board/turn state through useOnlineGame (session + room)
+  // instead of the local `history` stack — pick whichever this render is in.
+  const isOnline = mode.kind === "online";
+  const displayState = isOnline ? onlineGame.state : state;
+  const displaySelected = isOnline ? onlineGame.selected : selected;
+  const displayLegalMoves = isOnline ? onlineGame.legalMoves : legalMoves;
+  const displayInCheck = isInCheck(displayState.board, displayState.turn);
 
   return (
     <GameScreen
-      state={state}
+      state={displayState}
       mode={mode}
-      selected={selected}
-      legalMoves={legalMoves}
-      inCheck={inCheck}
+      selected={displaySelected}
+      legalMoves={displayLegalMoves}
+      inCheck={displayInCheck}
       flipped={flipped}
       thinking={thinking}
+      opponentLeft={isOnline ? onlineGame.opponentLeft : false}
       canUndo={mode.kind === "hotseat" && history.length > 1}
-      onTapSquare={handleTapSquare}
+      onTapSquare={isOnline ? onlineGame.onTapSquare : handleTapSquare}
       onFlip={() => setFlipped((f) => !f)}
       onUndo={undo}
-      onResign={handleResign}
+      onResign={isOnline ? onlineGame.onResign : handleResign}
       onNewGame={resetGame}
     />
   );
